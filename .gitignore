@@ -127,3 +127,20 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# tif images
+EOGimages/
+EOG_korea/
+
+# test형식 예외처리
+test*.py
+
+# 크롬드라이버 예외처리
+chromedriver.exe
+
+# 결과값들 예외처리
+results/
+
+config.json
+
+old/
