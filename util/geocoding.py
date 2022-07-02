@@ -26,7 +26,11 @@ class osmgeo():
 
     def findloc(self, address):
         geo = geo_local.geocode(address)
-        return geo.latitude, geo.longitude
+        try:
+            lat, lon = geo.latitude, geo.longitude
+        except:
+            lat, lon = None, None
+        return lat, lon
 
 
 class navergeo():

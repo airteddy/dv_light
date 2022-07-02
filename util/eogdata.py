@@ -5,12 +5,15 @@ eog 사이트 ("https://eogdata.mines.edu/nighttime_light/nightly/rade9d/") 에�
 3. DB에 저장
 """
 
+print("eog start..")
+print("read package")
 from multiprocessing.connection import wait
 from matplotlib.pyplot import rc
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 import time
 import os
 import glob
@@ -18,12 +21,40 @@ import json
 import tqdm 
 import chromedriver_autoinstaller
 import numpy as np
+from osgeo import gdal
+
+print("read done")
 
 class EOGnight():
     def __init__(self, config):
         self.config = config
 
-    def load_saved_file_list(self, is_only_korea = False):
+    def get_korea_opt(self):
+        return self.config["nightly"]["raw"]["save_only_korea"]
+
+    def read_tif_date(self, date, is_only_korea = get_korea_opt()):
+        try:
+            date = int(date)
+            date = str(date)
+            # yyyy = date[0:4]
+            # mm = date[4:6]
+            # dd = date[6:]
+            # assert int(1980) < int(yyyy) < int()
+        except:
+            print(str(date) + "is not a from like YYYYMMDD")
+            return None
+
+        if is_only_korea:
+            filelist = glob.glob(self.config["nightly"]["korea"]["save_path"] + "*")
+        else:
+            filelist = glob.glob(self.config["nightly"]["raw"]["save_path"] + "*")
+
+        tifpath = list(filter(lambda x: date in x, filelist))[0]
+        tif = gdal.Open(tifpath)
+
+        return tif
+
+    def load_saved_file_list(self, is_only_korea = get_korea_opt()):
         if is_only_korea:
             filelist = glob.glob(self.config["nightly"]["korea"]["save_path"] + "*")
         else:
@@ -72,12 +103,12 @@ class EOGnight():
         
         # date -> str : yyyymmdd 
 
-        download_path = os.path.abspath(config["eog"]["downloadpath"])
+        download_path = os.path.abspath(self.config["eog"]["downloadpath"])
 
         print(download_path)
 
         options = webdriver.ChromeOptions()
-        options.add_argument(config["eog"]["chrome_user_agent"])
+        options.add_argument(self.config["eog"]["chrome_user_agent"])
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
         prefs = {"download.default_directory":download_path}
         options.add_experimental_option("prefs", prefs)
@@ -91,30 +122,34 @@ class EOGnight():
         id = self.config["eog"]["id"]
         pswd = self.config["eog"]["pw"]
 
-        driver.find_element_by_id("username").send_keys(id)
-        driver.find_element_by_id("password").send_keys(pswd)
-        driver.find_element_by_id("kc-login").click()
+        driver.find_element(By.ID,"username").send_keys(id)
+        driver.find_element(By.ID,"password").send_keys(pswd)
+        driver.find_element(By.ID,"kc-login").click()
 
         for i in tqdm.tqdm(range(0,int(self.config["eog"]["waittime"]))):
             time.sleep(1)
 
         while (wait_download(download_path)):
             time.sleep(1)
-
-        
+ 
     def update(self):
-        self.is_new_file()
+        if int(self.config["nightly"]["raw"]["update_period"]) != 0:
+            self.is_new_file()
+            max_period_num = np.min([1+int(self.config["nightly"]["raw"]["update_period"]), len(self.result_list)])
+        else:
+            max_period_num = 0
 
-        max_period_num = np.min([1+int(self.config["nightly"]["raw"]["update_period"]), len(self.result_list)])
 
         if int(max_period_num) < 2:
-            print("update end")
+            print("eog update end")
         else:
             print(self.result_list[1:max_period_num])
             for index in range(1,max_period_num):
                 print(str(self.result_list[index]) + "is on queue...")
                 self.download_tif(str(self.result_list[index]))
                 print(str(self.result_list[index]) + "is end\n\n===============")
+
+
 
 if __name__ == "__main__":
     def configure(configpath):

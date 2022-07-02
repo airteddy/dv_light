@@ -7,16 +7,12 @@ import pandas as pd
 import cv2
 import glob
 
-class crop():
-    def __init__(self, config):
-        self.config = config
+# def crop_by_coords
+def crop_by_coords(tif, lat, lon, scale):
+    return gdal.Translate('new.tif', tif, projWin = [lon-scale, lat+scale, lon+scale, lat-scale])
 
-        self.filelist = glob.glob(self.config["nightly"]["raw"]["save_path"] + "*")
-        
-    def show_possible_period(self):
-        return self.filelist
-
-    
+def crop_korea(tif):
+    return gdal.Translate('new.tif', tif, projWin = [125, 40, 131, 32])
 
 
     
